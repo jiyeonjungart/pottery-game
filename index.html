@@ -3,402 +3,523 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Pottery Studio</title>
+  <title>pottery STUDIO</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,300;1,400;1,500&family=DM+Sans:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* ═══ Core Harmony — Moody Dark Variant ═══ */
+    :root {
+      --bg-primary:    #1a0d05;
+      --bg-secondary:  #221107;
+      --bg-warm-white: #2e1609;
+      --surface-light: #3a1f10;
+      --surface-medium:#4a2814;
+      --text-primary:  #f4dfb8;
+      --text-secondary:#e6c89a;
+      --text-muted:    #b89878;
+      --text-light:    #8e7252;
+      --accent-olive:     #c8d68a;
+      --accent-olive-dark:#a0b070;
+      --accent-brown:     #d4884a;
+      --accent-stone:     #b89878;
+      --border-subtle:    #6b3f24;
+      --border-light:     #4a2814;
+      --font-italic: 'Cormorant Garamond', serif;
+      --font-sans: 'DM Sans', system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#2e1a0c; overflow:hidden; font-family:'Segoe UI',system-ui,sans-serif; user-select:none; }
+    body {
+      background: var(--bg-primary);
+      overflow:hidden;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      user-select:none;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font-family: inherit; }
+
+    /* Hide in-app chrome while title/instructions overlay is showing */
+    body.boot-stage #top-bar,
+    body.boot-stage #status,
+    body.boot-stage #ui,
+    body.boot-stage .cam-wrap,
+    body.boot-stage #drag-hint { display: none !important; }
 
     #three-canvas { position:fixed; inset:0; width:100vw; height:100vh; display:block; }
 
-    /* ── Webcam ── */
+    /* ═══ Top Editorial Navigation Bar ═══ */
+    #top-bar {
+      position:fixed; top:0; left:0; right:0; z-index:25;
+      display:grid; grid-template-columns: 1fr 1fr 1fr;
+      align-items:center;
+      padding: 18px 32px 14px;
+      background: linear-gradient(to bottom, rgba(26,13,5,0.92) 0%, rgba(26,13,5,0.65) 70%, rgba(26,13,5,0) 100%);
+      pointer-events:none;
+    }
+    #top-bar > * { pointer-events:auto; }
+    .brand {
+      display:flex; align-items:baseline; gap:7px;
+      font-size: 26px; line-height:1;
+    }
+    .brand-italic {
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      color: var(--accent-olive); letter-spacing: 0.5px; font-size: 1.05em;
+    }
+    .brand-bold {
+      font-family: var(--font-sans); font-weight:900;
+      color: var(--text-primary); text-transform:uppercase;
+      letter-spacing: 0.04em; font-size: 0.92em;
+    }
+    .top-title {
+      text-align:center;
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      color: var(--text-secondary); font-size: 17px; letter-spacing: 0.3px;
+    }
+    .top-meta {
+      text-align:right;
+      font-family: var(--font-mono); font-weight:400;
+      color: var(--text-muted); font-size: 11px;
+      letter-spacing: 0.15em; text-transform:uppercase;
+    }
+    .top-meta span { display:block; line-height:1.5; }
+    .top-meta .num { color: var(--text-primary); font-weight:500; }
+
+    /* ═══ Status ═══ */
+    #status {
+      position:fixed; top:64px; left:50%; transform:translateX(-50%);
+      display:flex; align-items:center; gap:10px;
+      padding: 9px 20px;
+      background: var(--bg-warm-white);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0;
+      font-family: var(--font-mono);
+      font-size:11px; letter-spacing:0.18em;
+      text-transform:uppercase; color:var(--text-muted);
+      z-index:20; white-space:nowrap;
+      transition: color .4s var(--ease), border-color .4s var(--ease), background .4s var(--ease);
+    }
+    #status.hand   { color: var(--accent-olive); border-color: var(--accent-olive); }
+    #status.sculpt { color: var(--accent-olive-dark); border-color: var(--accent-olive-dark); background: var(--surface-light); }
+    #status-dot { width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0; }
+
+    /* ═══ Webcam ═══ */
     .cam-wrap {
       position:fixed; bottom:24px; left:24px; z-index:20;
-      border-radius:12px; overflow:hidden;
-      border:1.5px solid rgba(255,190,120,.22);
+      background: var(--bg-warm-white);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 6px 22px;
     }
-    #webcam { width:220px; height:165px; display:block; object-fit:cover; transform:scaleX(-1); opacity:.75; }
-    #hand-overlay { position:absolute; inset:0; width:220px; height:165px; pointer-events:none; transform:scaleX(-1); }
-    .cam-label { position:absolute; bottom:6px; left:50%; transform:translateX(-50%);
-      font-size:9px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,200,140,.45); white-space:nowrap; }
-
-    /* ── Status ── */
-    #status {
-      position:fixed; top:22px; left:50%; transform:translateX(-50%);
-      display:flex; align-items:center; gap:8px;
-      background:rgba(12,6,2,.85); backdrop-filter:blur(10px);
-      border:1px solid rgba(255,180,100,.14); border-radius:100px;
-      padding:7px 20px; font-size:11px; letter-spacing:1.8px;
-      text-transform:uppercase; color:rgba(220,180,120,.65); z-index:20;
-      transition:color .3s,border-color .3s,background .3s; white-space:nowrap;
+    #webcam { width:220px; height:165px; display:block; object-fit:cover; transform:scaleX(-1); filter:saturate(0.7) contrast(0.95); }
+    #hand-overlay { position:absolute; top:6px; left:6px; width:220px; height:165px; pointer-events:none; transform:scaleX(-1); }
+    .cam-label {
+      position:absolute; bottom:5px; left:8px; right:8px;
+      display:flex; justify-content:space-between;
+      font-family: var(--font-mono); font-size:9px;
+      letter-spacing:0.2em; text-transform:uppercase; color:var(--text-muted);
     }
-    #status.hand   { color:#a0dda8; border-color:rgba(160,221,168,.28); }
-    #status.sculpt { color:#f5c96a; border-color:rgba(245,201,106,.38); background:rgba(240,160,50,.12); }
-    #status-dot { width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+    .cam-label .cam-num { color: var(--text-primary); }
 
-    /* ── UI Panel ── */
+    /* ═══ Control Panel ═══ */
     #ui {
-      position:fixed; top:22px; right:22px; width:242px;
-      background:rgba(12,6,2,.88); backdrop-filter:blur(14px);
-      border:1px solid rgba(255,178,90,.17); border-radius:16px;
-      padding:18px 16px; z-index:20; color:#ddb870;
-      max-height:calc(100vh - 44px); overflow-y:auto;
+      position:fixed; top:108px; right:24px; width:280px;
+      background: var(--bg-warm-white);
+      border: 1px solid var(--border-subtle);
+      padding: 0; z-index:20;
+      max-height: calc(100vh - 132px); overflow-y:auto;
     }
-    #ui::-webkit-scrollbar { width:3px; }
-    #ui::-webkit-scrollbar-thumb { background:rgba(255,178,90,.2); border-radius:2px; }
-    #ui h2 { font-size:12px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#f2ca72;
-      margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-    #ui h2::before { content:''; display:inline-block; width:6px; height:6px; background:#f0a030;
-      border-radius:50%; animation:blink 2.4s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+    #ui::-webkit-scrollbar { width:4px; }
+    #ui::-webkit-scrollbar-track { background: var(--bg-warm-white); }
+    #ui::-webkit-scrollbar-thumb { background: var(--border-subtle); }
 
-    .ctrl { margin-bottom:12px; }
-    .ctrl-row { display:flex; justify-content:space-between; font-size:10px; letter-spacing:1.4px;
-      text-transform:uppercase; color:rgba(220,180,120,.52); margin-bottom:5px; }
-    .ctrl-row b { color:#f2ca72; font-weight:700; }
-
-    input[type=range] { width:100%; appearance:none; height:3px; background:rgba(255,178,90,.18);
-      border-radius:2px; outline:none; cursor:pointer; }
-    input[type=range]::-webkit-slider-thumb { appearance:none; width:13px; height:13px;
-      border-radius:50%; background:#f0a030; cursor:pointer; box-shadow:0 0 8px rgba(240,160,48,.55); }
-
-    hr.div { border:none; border-top:1px solid rgba(255,178,90,.1); margin:12px 0; }
-
-    .sec { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:rgba(220,180,120,.42); margin-bottom:7px; }
-
-    /* Hand section headers */
-    .hand-header {
-      display:flex; align-items:center; gap:7px;
-      font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
-      margin-bottom:7px; font-weight:600;
+    .sec-bar {
+      display:grid; grid-template-columns: auto 1fr auto;
+      align-items:center; gap:12px;
+      padding: 15px 20px 13px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-mono); font-size:10px;
+      letter-spacing: 0.18em; text-transform:uppercase; color: var(--text-muted);
     }
-    .hand-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-    .hand-dot.left  { background:#44ccff; box-shadow:0 0 6px #44ccff88; }
-    .hand-dot.right { background:#ff8833; box-shadow:0 0 6px #ff883388; }
-
-    .mode-row { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:12px; }
-    .mode-btn {
-      flex:1; min-width:36px;
-      background:rgba(255,178,90,.06); border:1px solid rgba(255,178,90,.13);
-      color:rgba(220,180,120,.65); padding:5px 2px; border-radius:6px;
-      font-size:9px; letter-spacing:1px; text-transform:uppercase;
-      cursor:pointer; transition:all .2s; text-align:center;
+    .sec-bar .sec-title {
+      text-align:left; color: var(--text-primary);
+      font-family: var(--font-sans); font-weight:700;
+      font-size:11px; letter-spacing: 0.12em;
     }
-    .mode-btn:hover { background:rgba(255,178,90,.14); color:#f2ca72; }
-    .mode-btn.active { background:rgba(240,160,48,.24); border-color:rgba(240,160,48,.55); color:#f2ca72; }
+    .sec-bar .sec-num { color: var(--text-light); }
+    .sec-body { padding: 18px 18px 22px; }
 
-    /* Gesture display */
-    .gesture-row { display:flex; gap:6px; margin-bottom:12px; }
+    .ctrl { margin-bottom: 18px; }
+    .ctrl:last-child { margin-bottom: 0; }
+    .ctrl-row {
+      display:flex; justify-content:space-between; align-items:baseline;
+      margin-bottom: 8px;
+    }
+    .ctrl-label {
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      color: var(--text-secondary); font-size: 17px; letter-spacing: 0.2px;
+    }
+    .ctrl-val {
+      font-family: var(--font-mono); font-weight:500;
+      color: var(--text-primary); font-size: 12px; letter-spacing: 0.05em;
+    }
+
+    input[type=range] {
+      width:100%; appearance:none; -webkit-appearance:none;
+      height:1px; background: var(--border-subtle); outline:none; cursor:pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance:none; -webkit-appearance:none;
+      width:14px; height:14px; border-radius:50%;
+      background: var(--accent-olive); cursor:pointer;
+      border: 2px solid var(--bg-primary);
+      box-shadow: 0 0 0 1px var(--accent-olive);
+      transition: transform .2s var(--ease);
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    input[type=range]::-moz-range-thumb {
+      width:14px; height:14px; border-radius:50%;
+      background: var(--accent-olive); cursor:pointer;
+      border: 2px solid var(--bg-primary);
+      box-shadow: 0 0 0 1px var(--accent-olive);
+    }
+    input[type=color] {
+      width:100%; height: 32px; padding: 0;
+      border: 1px solid var(--border-subtle);
+      background: none; cursor:pointer; border-radius: 0;
+    }
+    input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+    input[type=color]::-webkit-color-swatch { border: none; border-radius: 0; }
+
+    /* ═══ Gesture pills ═══ */
+    .gesture-row { display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 16px; }
     .gesture-pill {
-      flex:1; padding:5px 4px; border-radius:6px; text-align:center;
-      font-size:9px; letter-spacing:1px; text-transform:uppercase;
-      color:rgba(220,180,120,.4); background:rgba(255,178,90,.04);
-      border:1px solid rgba(255,178,90,.1); transition:all .3s;
+      padding: 10px 9px;
+      font-family: var(--font-mono); font-size:10px;
+      letter-spacing: 0.15em; text-transform:uppercase;
+      color: var(--text-light); background: var(--surface-light);
+      border: 1px solid var(--border-subtle);
+      border-left: 2px solid var(--border-subtle);
+      text-align: left; transition: all .4s var(--ease);
     }
-    .gesture-pill.active-left  { color:#44ccff; background:rgba(68,204,255,.1); border-color:rgba(68,204,255,.3); }
-    .gesture-pill.active-right { color:#ff8833; background:rgba(255,136,51,.1); border-color:rgba(255,136,51,.3); }
-
-    .act-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
-    .act-btn {
-      background:rgba(255,178,90,.06); border:1px solid rgba(255,178,90,.13);
-      color:rgba(220,180,120,.75); padding:8px 4px; border-radius:7px;
-      font-size:10px; letter-spacing:1px; text-transform:uppercase;
-      cursor:pointer; transition:all .2s; text-align:center;
+    .gesture-pill.active-left  { color: var(--text-primary); border-left-color: var(--accent-olive); background: var(--surface-medium); }
+    .gesture-pill.active-right { color: var(--text-primary); border-left-color: var(--accent-brown); background: var(--surface-medium); }
+    .gesture-pill .ghand {
+      display:block; font-family: var(--font-italic); font-style:italic;
+      font-size: 13px; color: var(--text-muted);
+      letter-spacing: 0; text-transform: none; margin-bottom: 2px;
     }
-    .act-btn:hover  { background:rgba(255,178,90,.18); color:#f2ca72; }
-    .act-btn:active { transform:scale(.94); }
 
-    input[type=color] { width:100%; height:28px; border-radius:7px;
-      border:1px solid rgba(255,178,90,.18); cursor:pointer; background:none; padding:2px 3px; }
+    /* ═══ Action buttons ═══ */
+    .act-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .act-btn, .act-btn-wide {
+      background: var(--bg-warm-white); border: 1px solid var(--text-primary);
+      color: var(--text-primary); padding: 11px 8px;
+      font-family: var(--font-sans); font-weight:700;
+      font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+      cursor:pointer; text-align:center; transition: all .3s var(--ease); border-radius: 0;
+    }
+    .act-btn:hover, .act-btn-wide:hover { background: var(--text-primary); color: var(--bg-primary); }
+    .act-btn-wide { width: 100%; margin-top: 6px; }
+    .act-btn-wide.olive { border-color: var(--accent-olive); color: var(--accent-olive); }
+    .act-btn-wide.olive:hover { background: var(--accent-olive); color: var(--bg-warm-white); }
 
-    /* ── Onboarding ── */
+    /* ═══ Drag-rotate hint ═══ */
+    #drag-hint {
+      position:fixed; bottom:32px; left:50%; transform:translateX(-50%);
+      padding: 9px 22px; background: var(--bg-warm-white);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono); font-size:11px;
+      letter-spacing: 0.18em; text-transform:uppercase; color: var(--text-muted);
+      pointer-events:none; z-index:15; display:none; white-space:nowrap;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TITLE SCREEN — cinematic, live 3D backdrop
+       ═══════════════════════════════════════════════════════════ */
+    #onboarding, #instructions {
+      position:fixed; inset:0; z-index:100;
+      display:flex; flex-direction:column;
+      color: var(--text-primary);
+    }
     #onboarding {
-      position:fixed; inset:0;
-      background: #180c05;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      z-index:100;
-      font-family:'Nunito', sans-serif;
-      overflow:hidden;
+      background:
+        radial-gradient(ellipse at center, rgba(20,10,3,0.65) 0%, rgba(14,7,3,0.85) 55%, rgba(6,3,1,0.98) 100%);
+      transition: background 350ms var(--ease);
+    }
+    #onboarding.is-leaving {
+      background:
+        radial-gradient(ellipse at center, rgba(14,7,3,0.92) 0%, rgba(8,4,1,0.97) 55%, rgba(2,1,0,1) 100%);
+    }
+    #instructions {
+      background:
+        radial-gradient(ellipse at center, rgba(14,7,3,0.92) 0%, rgba(8,4,1,0.97) 55%, rgba(2,1,0,1) 100%);
+      opacity: 0;
+      transition: opacity 750ms var(--ease);
+    }
+    #instructions.is-in { opacity: 1; }
+    #onboarding.is-gone, #instructions.is-gone {
+      opacity: 0; pointer-events: none; visibility: hidden;
+      transition: opacity 700ms var(--ease), visibility 0s linear 700ms;
+    }
+    @keyframes ts-fade-in { from { opacity:0; } to { opacity:1; } }
+
+    /* HUD bars */
+    .hud {
+      display:grid; grid-template-columns: 1fr 1fr 1fr;
+      padding: 22px 38px;
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .hud.top { border-bottom: 1px solid var(--border-subtle); }
+    .hud.bottom { border-top: 1px solid var(--border-subtle); margin-top: auto; }
+    .hud .center { text-align:center; color: var(--text-secondary); }
+    .hud .right { text-align:right; }
+    .hud .accent { color: var(--accent-olive); }
+
+    /* HUD corner brackets */
+    .hud-corner {
+      position:fixed; width: 28px; height: 28px;
+      border: 1px solid var(--text-muted);
+      pointer-events:none; opacity:0.55; z-index:101;
+    }
+    .hud-corner.tl { top: 16px; left: 16px;  border-right:none; border-bottom:none; }
+    .hud-corner.tr { top: 16px; right: 16px; border-left:none;  border-bottom:none; }
+    .hud-corner.bl { bottom: 16px; left: 16px; border-right:none; border-top:none; }
+    .hud-corner.br { bottom: 16px; right: 16px; border-left:none; border-top:none; }
+
+    /* Title stage */
+    .ts-stage {
+      flex: 1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding: 32px 32px 40px; gap: 8px;
+    }
+    .ts-eyebrow {
+      font-family: var(--font-mono); font-size: 12px;
+      letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent-olive);
+      margin-bottom: 22px;
+      animation: ts-rise 900ms var(--ease) 200ms both;
+    }
+    @keyframes ts-rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .ts-wordmark {
+      display:flex; align-items:baseline; gap: 14px;
+      line-height: 0.88;
+      animation: ts-rise 1200ms var(--ease) 350ms both;
+    }
+    .ts-wordmark .wm-italic {
+      font-family: var(--font-italic); font-style:italic; font-weight:300;
+      color: var(--accent-olive);
+      font-size: clamp(96px, 14vw, 200px); letter-spacing: -2px;
+    }
+    .ts-wordmark .wm-bold {
+      font-family: var(--font-sans); font-weight:900;
+      color: var(--text-primary); text-transform: uppercase;
+      font-size: clamp(76px, 11vw, 160px); letter-spacing: -3px;
+    }
+    .ts-tagline {
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      font-size: clamp(18px, 2vw, 24px); color: var(--text-secondary);
+      letter-spacing: 0.3px; margin-top: 18px;
+      animation: ts-rise 1100ms var(--ease) 550ms both;
+    }
+    .ts-rule {
+      width: 80px; height: 1px; background: var(--text-muted);
+      margin: 32px 0 28px; transform-origin: center; opacity: 0.6;
+      animation: ts-rule-grow 1100ms var(--ease) 700ms both;
+    }
+    @keyframes ts-rule-grow {
+      from { transform: scaleX(0); opacity: 0; }
+      to   { transform: scaleX(1); opacity: 0.6; }
+    }
+    .ts-cta {
+      position:relative; background: transparent; border: none; padding: 14px 0;
+      cursor: pointer; font-family: var(--font-sans); font-weight:700;
+      font-size: 14px; letter-spacing: 0.32em; text-transform: uppercase;
+      color: var(--text-primary); display:flex; align-items:center; gap: 18px;
+      transition: gap .3s var(--ease), color .3s var(--ease);
+      animation: ts-rise 1100ms var(--ease) 850ms both, ts-pulse 2.4s ease-in-out 1800ms infinite;
+    }
+    .ts-cta .bracket {
+      font-family: var(--font-mono); font-weight:400; font-size: 24px;
+      color: var(--accent-olive); transition: transform .3s var(--ease), color .3s var(--ease);
+    }
+    .ts-cta:hover { color: var(--accent-olive-dark); gap: 26px; }
+    .ts-cta:hover .bracket { color: var(--accent-olive-dark); }
+    .ts-cta:hover .bracket.l { transform: translateX(-6px); }
+    .ts-cta:hover .bracket.r { transform: translateX(6px); }
+    @keyframes ts-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+    .ts-hint {
+      margin-top: 22px; font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-light);
+      animation: ts-rise 1100ms var(--ease) 1100ms both;
+    }
+    .ts-hint .key {
+      display:inline-block; padding: 2px 8px;
+      border: 1px solid var(--text-light); margin: 0 4px; color: var(--text-muted);
     }
 
-    /* Decorative blobs in corners */
-    #onboarding::before, #onboarding::after {
-      content:''; position:absolute; border-radius:50%;
-      opacity:0.22; pointer-events:none;
+    /* ═══════════════════════════════════════════════════════════
+       INSTRUCTIONS — game-style move list
+       ═══════════════════════════════════════════════════════════ */
+    .is-stage {
+      flex: 1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding: 24px 32px; overflow-y: auto;
     }
-    #onboarding::before {
-      width:500px; height:500px; background:#6a2a0a;
-      top:-180px; left:-180px;
+    .is-eyebrow {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 0.32em; text-transform: uppercase;
+      color: var(--accent-olive); margin-bottom: 12px;
     }
-    #onboarding::after {
-      width:420px; height:420px; background:#3a2010;
-      bottom:-140px; right:-140px;
+    .is-title {
+      display:flex; align-items:baseline; gap: 14px;
+      line-height: 0.95; margin-bottom: 8px;
     }
-
-    /* Floating decorative emoji scattered around */
-    .ob-deco {
-      position:absolute; pointer-events:none; font-size:22px;
-      opacity:0.28; animation:obFloat 5s ease-in-out infinite;
-      filter: saturate(0.6) brightness(0.7);
+    .is-title em {
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      color: var(--text-secondary); font-size: clamp(36px, 5vw, 56px); letter-spacing: 0.5px;
     }
-    .ob-deco:nth-child(1) { top:8%; left:7%;  animation-delay:0s;   font-size:20px; }
-    .ob-deco:nth-child(2) { top:12%; right:9%; animation-delay:.8s;  font-size:18px; }
-    .ob-deco:nth-child(3) { bottom:14%; left:6%; animation-delay:1.4s; font-size:24px; }
-    .ob-deco:nth-child(4) { bottom:10%; right:7%; animation-delay:.4s; font-size:20px; }
-    .ob-deco:nth-child(5) { top:42%; left:4%;   animation-delay:2s;   font-size:16px; }
-    .ob-deco:nth-child(6) { top:35%; right:4%;  animation-delay:1.1s; font-size:16px; }
-    @keyframes obFloat {
-      0%,100%{ transform:translateY(0) rotate(0deg); }
-      50%{ transform:translateY(-8px) rotate(6deg); }
+    .is-title strong {
+      font-family: var(--font-sans); font-weight:900;
+      color: var(--text-primary); text-transform: uppercase;
+      font-size: clamp(32px, 4.5vw, 50px); letter-spacing: -1.5px;
     }
-
-    /* Inner content card */
-    .ob-card {
-      position:relative; z-index:2;
-      background: #231008;
-      border-radius: 28px;
-      border: 1px solid rgba(180,90,30,.18);
-      padding: 38px 44px 34px;
-      max-width: 700px;
-      width: 92%;
-      box-shadow: 0 12px 60px rgba(0,0,0,.65), 0 2px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(200,120,60,.08);
-      display:flex; flex-direction:column; align-items:center;
+    .is-sub {
+      font-family: var(--font-italic); font-style:italic;
+      font-size: 17px; color: var(--text-muted);
+      letter-spacing: 0.3px; margin-bottom: 28px;
     }
-
-    /* Chunky two-color title */
-    .ob-title {
-      font-family:'Fredoka One', cursive;
-      font-size: 54px;
-      line-height: 1;
-      margin-bottom: 6px;
-      letter-spacing: 2px;
+    .is-moves {
+      display: flex; flex-direction: column;
+      max-width: 720px; width: 100%;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 4px 0; margin-bottom: 28px;
     }
-    .ob-title .t1 { color: #c4622a; text-shadow: 3px 4px 0 #5a1e06; }
-    .ob-title .t2 { color: #7a8a58; text-shadow: 3px 4px 0 #2e3820; }
-
-    .ob-sub {
-      font-size:14px; color:#7a5438; font-weight:600;
-      letter-spacing:.5px; margin-bottom:32px;
+    .is-move {
+      display: grid; grid-template-columns: 48px 180px 1fr;
+      column-gap: 24px; align-items: center; padding: 14px 12px;
+      border: 1px solid transparent;
+      border-bottom-color: var(--border-light);
+      transition: border-color .3s var(--ease), color .3s var(--ease);
     }
-
-    /* Step cards row */
-    .steps {
-      display:flex; gap:14px; margin-bottom:32px;
-      flex-wrap:wrap; justify-content:center;
+    .is-move:last-child { border-bottom-color: transparent; }
+    .is-move:hover { border-color: var(--accent-olive); color: var(--text-primary); }
+    .is-move .m-num {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-light); letter-spacing: 0.15em; text-align: left;
     }
-    .step {
-      background: #1c0d06;
-      border: 2px dashed #4a2810;
-      border-radius:18px;
-      padding:18px 14px 16px;
-      width:138px; min-width:120px;
-      text-align:center;
-      position:relative;
-      transition: transform .2s, box-shadow .2s;
+    .is-move .m-gesture {
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      font-size: 24px; color: var(--accent-olive); letter-spacing: 0.3px;
     }
-    .step:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,.5), 0 0 0 1px rgba(180,80,30,.2); }
-
-    /* Numbered badge */
-    .step-num {
-      position:absolute; top:-14px; left:50%; transform:translateX(-50%);
-      width:28px; height:28px; border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-family:'Fredoka One', cursive; font-size:15px; color:#e8c89a;
-      box-shadow:0 2px 10px rgba(0,0,0,.5);
+    .is-move .m-action {
+      font-family: var(--font-sans); font-weight:400;
+      font-size: 14px; color: var(--text-secondary); letter-spacing: 0.04em; line-height: 1.5;
+      display: grid; grid-template-columns: 90px 1fr;
+      column-gap: 16px; align-items: baseline;
     }
-    .step:nth-child(1) .step-num { background:#6e2010; }
-    .step:nth-child(2) .step-num { background:#6a3c10; }
-    .step:nth-child(3) .step-num { background:#3a5228; }
-    .step:nth-child(4) .step-num { background:#1e3a52; }
-
-    .step-icon { font-size:28px; margin:6px 0 10px; filter: saturate(0.7) brightness(0.85); }
-    .step-text {
-      font-size:11.5px; color:#9a7050; line-height:1.55;
-      font-weight:600;
+    .is-move .m-action b {
+      font-weight: 700; color: var(--text-primary);
+      text-transform: uppercase; font-size: 12px; letter-spacing: 0.14em;
+    }
+    .is-cta-row {
+      display:flex; gap: 18px; align-items:center;
+      margin-top: 8px; flex-wrap: wrap; justify-content: center;
+    }
+    .is-cta {
+      background: transparent; border: none; padding: 14px 0; cursor: pointer;
+      font-family: var(--font-sans); font-weight:700;
+      font-size: 13px; letter-spacing: 0.28em; text-transform: uppercase;
+      color: var(--text-primary); display:flex; align-items:center; gap: 14px;
+      transition: gap .3s var(--ease), color .3s var(--ease);
+    }
+    .is-cta .bracket {
+      font-family: var(--font-mono); font-weight:400; font-size: 22px;
+      transition: transform .3s var(--ease);
+    }
+    .is-cta.primary { color: var(--text-primary); animation: ts-pulse 2.4s ease-in-out 1000ms infinite; }
+    .is-cta.primary .bracket { color: var(--accent-olive); }
+    .is-cta.primary:hover { color: var(--accent-olive-dark); gap: 22px; }
+    .is-cta.primary:hover .bracket { color: var(--accent-olive-dark); }
+    .is-cta.primary:hover .bracket.l { transform: translateX(-5px); }
+    .is-cta.primary:hover .bracket.r { transform: translateX(5px); }
+    .is-cta-sub {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-light); letter-spacing: 0.2em; text-transform: uppercase;
     }
 
-    /* Start button */
-    #start-btn {
-      background: #6e2c10;
-      border: 1px solid rgba(200,100,50,.25);
-      color: #f0d0a0;
-      padding: 15px 54px;
-      border-radius: 100px;
-      font-family:'Fredoka One', cursive;
-      font-size: 20px;
-      letter-spacing: 1px;
-      cursor: pointer;
-      box-shadow: 0 6px 0 #3a1006, 0 8px 28px rgba(0,0,0,.5);
-      transition: all .18s ease;
-      display:flex; align-items:center; gap:10px;
-    }
-    #start-btn:hover {
-      background: #8a3818;
-      color: #fce8c0;
-      transform: translateY(-3px);
-      box-shadow: 0 9px 0 #3a1006, 0 14px 32px rgba(0,0,0,.55);
-    }
-    #start-btn:active {
-      transform: translateY(2px);
-      box-shadow: 0 3px 0 #3a1006, 0 4px 14px rgba(0,0,0,.4);
-    }
-
-    /* ── Calibration overlay ── */
+    /* ═══ Calibration ═══ */
     #cal-overlay {
       position:fixed; inset:0; z-index:90;
-      background:rgba(8,4,2,.82); backdrop-filter:blur(12px);
+      background: rgba(242,237,230,.94); backdrop-filter: blur(8px);
       display:none; flex-direction:column; align-items:center; justify-content:center;
     }
     #cal-card {
-      background:#231008; border:1px solid rgba(200,120,60,.22); border-radius:22px;
-      padding:36px 40px 30px; max-width:360px; width:90%; text-align:center;
-      box-shadow:0 12px 52px rgba(0,0,0,.65);
+      background: var(--bg-warm-white); border: 1px solid var(--border-subtle);
+      padding: 0; width: 420px; max-width: 92%;
     }
-    #cal-icon { font-size:64px; line-height:1; margin-bottom:14px; }
+    .cal-header {
+      display:grid; grid-template-columns: 1fr 1fr 1fr;
+      padding: 14px 22px; border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-mono); font-size: 9px;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .cal-header .center { text-align:center; color: var(--text-primary); font-weight:500; }
+    .cal-header .right { text-align:right; }
+    .cal-body { padding: 48px 36px 32px; text-align:center; }
+    #cal-icon {
+      font-family: var(--font-mono); font-size: 14px;
+      letter-spacing: 0.15em; color: var(--text-light); margin-bottom: 24px;
+    }
     #cal-gesture-name {
-      font-family:'Fredoka One',cursive; font-size:26px; color:#f2ca72;
-      margin-bottom:6px; letter-spacing:1px;
+      font-family: var(--font-italic); font-style:italic; font-weight:400;
+      font-size: 42px; line-height: 1.05; color: var(--text-primary);
+      margin-bottom: 12px; letter-spacing: 0.3px;
     }
     #cal-instruction {
-      font-size:12px; color:rgba(200,160,100,.60); letter-spacing:1.5px;
-      text-transform:uppercase; margin-bottom:22px;
+      font-family: var(--font-sans); font-weight:300;
+      font-size: 13px; line-height: 1.6; color: var(--text-muted); margin-bottom: 32px;
     }
-    #cal-progress-bar {
-      height:6px; background:rgba(255,178,90,.14); border-radius:3px;
-      overflow:hidden; margin-bottom:12px;
-    }
+    #cal-progress-bar { height: 2px; background: var(--border-subtle); margin-bottom: 14px; position: relative; }
     #cal-fill {
-      height:100%; width:0%; background:#f0a030;
-      border-radius:3px; transition:width .1s linear;
+      position: absolute; top:0; left:0; bottom:0; width: 0%;
+      background: var(--accent-olive); transition: width .1s linear;
     }
     #cal-step-count {
-      font-size:10px; color:rgba(200,160,100,.45); letter-spacing:2px;
-      text-transform:uppercase; margin-bottom:22px;
+      font-family: var(--font-mono); font-size: 9px;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-light); margin-bottom: 28px;
     }
     #cal-skip {
-      background:transparent; border:1px solid rgba(200,120,60,.25);
-      color:rgba(200,150,90,.50); padding:8px 22px; border-radius:100px;
-      font-size:10px; letter-spacing:2px; text-transform:uppercase;
-      cursor:pointer; transition:all .2s;
+      background: transparent; border: 1px solid var(--text-primary);
+      color: var(--text-primary); padding: 10px 28px;
+      font-family: var(--font-sans); font-weight:700;
+      font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+      cursor:pointer; border-radius: 0; transition: all .3s var(--ease);
     }
-    #cal-skip:hover { color:rgba(220,170,110,.80); border-color:rgba(200,120,60,.50); }
+    #cal-skip:hover { background: var(--text-primary); color: var(--bg-primary); }
 
-    /* ── Instruction overlay ── */
-    #instructions {
-      position:fixed; inset:0; z-index:50;
-      display:none; align-items:center; justify-content:center;
-      background:rgba(14,6,2,.72);
-      backdrop-filter:blur(18px) saturate(1.15);
-      font-family:'Nunito',sans-serif;
-      padding:20px; overflow-y:auto;
+    /* ═══ Responsive ═══ */
+    @media (max-width: 720px) {
+      .hud { padding: 18px 24px; font-size: 9px; }
+      .ts-wordmark { gap: 8px; }
+      .is-move { grid-template-columns: 140px 1fr; column-gap: 16px; padding: 12px 10px; }
+      .is-move .m-num { display: none; }
+      .is-move .m-action { font-size: 12px; grid-template-columns: 72px 1fr; column-gap: 12px; }
+      .is-move .m-gesture { font-size: 18px; }
+      #ui { width: calc(100% - 32px); right: 16px; top: 96px; }
     }
-    #instr-card {
-      position:relative;
-      max-width:860px; width:100%;
-      background:
-        radial-gradient(ellipse at 18% 8%,  rgba(180,80,20,.07) 0%, transparent 55%),
-        radial-gradient(ellipse at 82% 92%, rgba(120,55,10,.07) 0%, transparent 55%),
-        rgba(30,14,4,.90);
-      border:1px solid rgba(210,150,75,.20);
-      border-radius:28px;
-      padding:36px 40px 30px;
-      box-shadow:0 20px 72px rgba(0,0,0,.75), inset 0 1px 0 rgba(230,170,90,.08);
-      max-height:calc(100vh - 40px); overflow-y:auto;
-    }
-    #instr-card::-webkit-scrollbar { width:3px; }
-    #instr-card::-webkit-scrollbar-thumb { background:rgba(255,178,90,.18); border-radius:2px; }
-
-    #instr-title {
-      font-family:'Caveat',cursive;
-      font-size:40px; font-weight:700;
-      color:#f5ca72; text-align:center;
-      letter-spacing:1px; line-height:1;
-      margin-bottom:4px;
-      text-shadow:0 3px 14px rgba(0,0,0,.45);
-    }
-    #instr-sub {
-      text-align:center; font-size:11px; letter-spacing:2.5px;
-      text-transform:uppercase; color:rgba(210,165,100,.42);
-      margin-bottom:28px;
-    }
-
-    .instr-sep {
-      font-size:11px; letter-spacing:2.5px; text-transform:uppercase;
-      color:rgba(210,160,90,.40); margin-bottom:12px;
-      padding-bottom:7px; border-bottom:1px solid rgba(210,150,75,.12);
-    }
-
-    /* 3-column gesture grid */
-    .instr-gestures {
-      display:grid; grid-template-columns:repeat(3,1fr);
-      gap:10px; margin-bottom:22px;
-    }
-    @media(max-width:640px){ .instr-gestures { grid-template-columns:repeat(2,1fr); } }
-
-    .instr-g {
-      background:rgba(255,178,90,.05);
-      border:1px solid rgba(255,178,90,.10);
-      border-radius:14px; padding:14px 12px 13px;
-      transition:border-color .2s, background .2s;
-    }
-    .instr-g:hover {
-      background:rgba(255,178,90,.09);
-      border-color:rgba(255,178,90,.20);
-    }
-    .instr-g-icon { font-size:32px; display:block; margin-bottom:8px; line-height:1; }
-    .instr-g-name {
-      font-size:14px; font-weight:800; color:#f0c060;
-      letter-spacing:.4px; margin-bottom:4px;
-    }
-    .instr-g-desc {
-      font-size:13px; color:rgba(210,170,115,.70); line-height:1.55;
-    }
-
-    /* 2-column controls list */
-    .instr-controls {
-      display:grid; grid-template-columns:1fr 1fr;
-      gap:8px 18px; margin-bottom:28px;
-    }
-    @media(max-width:560px){ .instr-controls { grid-template-columns:1fr; } }
-
-    .instr-c {
-      display:flex; gap:8px; align-items:flex-start;
-      font-size:13px; color:rgba(210,170,115,.72); line-height:1.5;
-    }
-    .instr-c-icon { font-size:17px; flex-shrink:0; margin-top:1px; opacity:.65; }
-    .instr-c b { color:#e8b85a; font-weight:800; }
-
-    /* Start button */
-    #instr-start-btn {
-      display:block; margin:0 auto;
-      background:#6e2c10; border:1px solid rgba(200,100,50,.28);
-      color:#f0d0a0; padding:14px 56px; border-radius:100px;
-      font-family:'Fredoka One',cursive; font-size:20px; letter-spacing:1px;
-      cursor:pointer;
-      box-shadow:0 5px 0 #3a1006, 0 8px 26px rgba(0,0,0,.55);
-      transition:all .18s ease;
-    }
-    #instr-start-btn:hover {
-      background:#8a3818; color:#fce8c0;
-      transform:translateY(-3px);
-      box-shadow:0 8px 0 #3a1006, 0 14px 32px rgba(0,0,0,.55);
-    }
-    #instr-start-btn:active {
-      transform:translateY(1px);
-      box-shadow:0 3px 0 #3a1006, 0 4px 12px rgba(0,0,0,.4);
-    }
-
-    /* ── Drag-rotate hint (visible only when wheel is paused) ── */
-    #drag-hint {
-      position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
-      background:rgba(0,0,0,.55); backdrop-filter:blur(8px);
-      border:1px solid rgba(200,160,100,.18); border-radius:100px;
-      padding:6px 18px; font-size:10px; letter-spacing:2px;
-      text-transform:uppercase; color:rgba(200,170,110,.60);
-      pointer-events:none; z-index:15; display:none; white-space:nowrap;
-      transition:opacity .4s;
+    @media (max-width: 480px) {
+      .hud-corner { width: 18px; height: 18px; }
+      .ts-eyebrow, .is-eyebrow { font-size: 9px; }
+      .ts-tagline { font-size: 14px; }
+      .ts-cta { font-size: 11px; letter-spacing: 0.25em; }
     }
   </style>
 </head>
@@ -406,158 +527,226 @@
 
 <canvas id="three-canvas"></canvas>
 
+<!-- Editorial top bar -->
+<div id="top-bar">
+  <div class="brand">
+    <span class="brand-italic">pottery</span>
+    <span class="brand-bold">STUDIO</span>
+  </div>
+  <div class="top-title">an exploration of form &amp; structure</div>
+  <div class="top-meta">
+    <span>POTTERY STUDIO · 2026</span>
+    <span class="num">DESIGN BY JENNY JUNG</span>
+  </div>
+</div>
+
 <div class="cam-wrap">
   <video id="webcam" autoplay playsinline muted></video>
   <canvas id="hand-overlay" width="220" height="165"></canvas>
-  <div class="cam-label">Dual Hand Tracking</div>
+  <div class="cam-label">
+    <span>dual hand tracking</span>
+    <span class="cam-num"></span>
+  </div>
 </div>
 
-<div id="status"><div id="status-dot"></div><span id="status-text">Starting…</span></div>
-<div id="drag-hint">↔ Drag to inspect</div>
+<div id="status"><div id="status-dot"></div><span id="status-text">starting</span></div>
+<div id="drag-hint">↔ drag to inspect</div>
 
 <div id="ui">
-  <h2>Pottery Studio</h2>
+  <!-- Section: Form -->
+  <div class="sec-bar">
+    <span>tools</span>
+    <span class="sec-title">Form</span>
+    <span class="sec-num">01</span>
+  </div>
+  <div class="sec-body">
+    <div class="ctrl">
+      <div class="ctrl-row">
+        <span class="ctrl-label">sensitivity</span>
+        <span class="ctrl-val" id="v-sensitivity">0.35</span>
+      </div>
+      <input type="range" id="s-sensitivity" min="0.05" max="1.0" step="0.05" value="0.35">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-row">
+        <span class="ctrl-label">brush radius</span>
+        <span class="ctrl-val" id="v-brush">0.50</span>
+      </div>
+      <input type="range" id="s-brush" min="0.08" max="1.6" step="0.04" value="0.5">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-row">
+        <span class="ctrl-label">carving depth</span>
+        <span class="ctrl-val" id="v-depth">0.50</span>
+      </div>
+      <input type="range" id="s-depth" min="0.05" max="2.0" step="0.05" value="0.5">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-row">
+        <span class="ctrl-label">clay</span>
+        <span class="ctrl-val">color</span>
+      </div>
+      <input type="color" id="clay-color" value="#b0622e">
+    </div>
+  </div>
 
-  <div class="ctrl">
-    <div class="ctrl-row">Sculpting Sensitivity <b id="v-sensitivity">0.35</b></div>
-    <input type="range" id="s-sensitivity" min="0.05" max="1.0" step="0.05" value="0.35">
+  <!-- Section: Gesture -->
+  <div class="sec-bar">
+    <span>signal</span>
+    <span class="sec-title">Gesture</span>
+    <span class="sec-num">02</span>
   </div>
-  <div class="ctrl">
-    <div class="ctrl-row">Brush Radius <b id="v-brush">0.50</b></div>
-    <input type="range" id="s-brush" min="0.08" max="1.6" step="0.04" value="0.5">
-  </div>
-  <div class="ctrl">
-    <div class="ctrl-row">Carving Depth <b id="v-depth">0.50</b></div>
-    <input type="range" id="s-depth" min="0.05" max="2.0" step="0.05" value="0.5">
-  </div>
-  <div class="ctrl">
-    <div class="ctrl-row">Clay Color</div>
-    <input type="color" id="clay-color" value="#b0622e">
+  <div class="sec-body">
+    <div class="gesture-row">
+      <div class="gesture-pill" id="gest-left"><span class="ghand">left</span>—</div>
+      <div class="gesture-pill" id="gest-right"><span class="ghand">right</span>—</div>
+    </div>
+    <button class="act-btn-wide olive" id="btn-calibrate">Calibrate Gestures</button>
   </div>
 
-  <hr class="div">
-
-  <div class="sec">Active Gestures</div>
-  <div class="gesture-row">
-    <div class="gesture-pill" id="gest-left">L: —</div>
-    <div class="gesture-pill" id="gest-right">R: —</div>
+  <!-- Section: Studio -->
+  <div class="sec-bar">
+    <span>session</span>
+    <span class="sec-title">Studio</span>
+    <span class="sec-num">03</span>
   </div>
-
-  <div class="act-grid">
-    <button class="act-btn" id="btn-reset">↺ Reset</button>
-    <button class="act-btn" id="btn-pause">⏸ Pause</button>
-    <button class="act-btn" id="btn-save">↓ Save</button>
-    <button class="act-btn" id="btn-wire">⌗ Wire</button>
+  <div class="sec-body">
+    <div class="act-grid">
+      <button class="act-btn" id="btn-reset">↺ Reset</button>
+      <button class="act-btn" id="btn-pause">⏸ Pause</button>
+      <button class="act-btn" id="btn-save">↓ Save</button>
+      <button class="act-btn" id="btn-wire">⌗ Wire</button>
+    </div>
   </div>
-
-  <hr class="div">
-  <button class="act-btn" id="btn-calibrate" style="width:100%;margin-top:0">⊙ Calibrate Gestures</button>
 </div>
 
-<!-- Calibration overlay (hidden until btn-calibrate is clicked) -->
+<!-- Calibration overlay -->
 <div id="cal-overlay">
   <div id="cal-card">
-    <div id="cal-icon">☝</div>
-    <div id="cal-gesture-name">Point finger</div>
-    <div id="cal-instruction">Hold the gesture steady…</div>
-    <div id="cal-progress-bar"><div id="cal-fill"></div></div>
-    <div id="cal-step-count">Step 1 of 4</div>
-    <button id="cal-skip">Skip Calibration</button>
+    <div class="cal-header">
+      <span>process</span>
+      <span class="center">Calibration</span>
+      <span class="right">04</span>
+    </div>
+    <div class="cal-body">
+      <div id="cal-icon">— I —</div>
+      <div id="cal-gesture-name">point finger</div>
+      <div id="cal-instruction">Hold the gesture steady. The system is learning the natural shape of your hand.</div>
+      <div id="cal-progress-bar"><div id="cal-fill"></div></div>
+      <div id="cal-step-count">step 01 / 04</div>
+      <button id="cal-skip">Skip Calibration</button>
+    </div>
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     TITLE SCREEN — cinematic, live 3D clay rotating behind
+     ═══════════════════════════════════════════════════════════════ -->
 <div id="onboarding">
-  <!-- floating decorations -->
-  <span class="ob-deco">🌿</span>
-  <span class="ob-deco">✨</span>
-  <span class="ob-deco">🍂</span>
-  <span class="ob-deco">💛</span>
-  <span class="ob-deco">🌱</span>
-  <span class="ob-deco">⭐</span>
+  <div class="hud-corner tl"></div>
+  <div class="hud-corner tr"></div>
+  <div class="hud-corner bl"></div>
+  <div class="hud-corner br"></div>
 
-  <div class="ob-card">
-    <div class="ob-title">
-      <span class="t1">POTTERY</span>&nbsp;<span class="t2">STUDIO</span>
+  <div class="hud top">
+    <div>POTTERY STUDIO · 2026</div>
+    <div class="center"></div>
+    <div class="right">DESIGN BY JENNY JUNG</div>
+  </div>
+
+  <div class="ts-stage">
+    <div class="ts-eyebrow">— the vessel —</div>
+    <div class="ts-wordmark">
+      <span class="wm-italic">pottery</span>
+      <span class="wm-bold" style="font-weight:500">STUDIO</span>
     </div>
-    <div class="ob-sub">✦ two-hand clay sculpting through your webcam ✦</div>
+    <div class="ts-tagline" style="padding:8px 0 0">an exploration of shape &amp; form</div>
+    <div class="ts-rule"></div>
+    <button id="start-btn" class="ts-cta">
+      <span class="bracket l">[</span>
+      <span class="label">begin</span>
+      <span class="bracket r">]</span>
+    </button>
+    <div class="ts-hint">PRESS ENTER OR CLICK TO BEGIN</div>
+  </div>
 
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-icon">📷</div>
-        <div class="step-text">Allow camera access when prompted</div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-icon">☝️</div>
-        <div class="step-text">Point to carve · pinch to pull · open hand to smooth</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-icon">🏺</div>
-        <div class="step-text">Both hands sculpt the spinning clay at once</div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-icon">⏸️</div>
-        <div class="step-text">Pause the wheel for precise free-form shaping</div>
-      </div>
-    </div>
-
-    <button id="start-btn">🤍 Let's Create</button>
+  <div class="hud bottom">
+    <div>A HAND-TRACKING STUDIO</div>
+    <div class="center"></div>
+    <div class="right">webcam required</div>
   </div>
 </div>
 
-<!-- Instruction screen (shown after welcome, before sculpting) -->
-<div id="instructions">
-  <div id="instr-card">
-    <div id="instr-title">How to Sculpt</div>
-    <div id="instr-sub">✦ gesture guide ✦</div>
+<!-- ═══════════════════════════════════════════════════════════════
+     INSTRUCTIONS — game-style move list
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="instructions" style="display:none;">
+  <div class="hud-corner tl"></div>
+  <div class="hud-corner tr"></div>
+  <div class="hud-corner bl"></div>
+  <div class="hud-corner br"></div>
 
-    <div class="instr-sep">Hand Gestures</div>
-    <div class="instr-gestures">
-      <div class="instr-g">
-        <div class="instr-g-icon">☝️</div>
-        <div class="instr-g-name">Poke / Carve</div>
-        <div class="instr-g-desc">Extend your index finger and press into the clay to carve a dent</div>
+  <div class="hud top">
+    <div>POTTERY STUDIO · 2026</div>
+    <div class="center"></div>
+    <div class="right">DESIGN BY JENNY JUNG</div>
+  </div>
+
+  <div class="is-stage">
+    <div class="is-eyebrow">— volume two · the practice —</div>
+    <div class="is-title">
+      <em>how to</em>
+      <strong>SCULPT</strong>
+    </div>
+    <div class="is-sub">six small movements — practiced until they become one</div>
+
+    <div class="is-moves">
+      <div class="is-move">
+        <div class="m-num">01</div>
+        <div class="m-gesture">point</div>
+        <div class="m-action"><b>carve</b><span>press the index finger into the surface</span></div>
       </div>
-      <div class="instr-g">
-        <div class="instr-g-icon">🤌</div>
-        <div class="instr-g-name">Pinch / Pull</div>
-        <div class="instr-g-desc">Pinch thumb and index together to grab and pull the clay outward</div>
+      <div class="is-move">
+        <div class="m-num">02</div>
+        <div class="m-gesture">pinch</div>
+        <div class="m-action"><b>pull</b><span>thumb &amp; index together — draw the wall outward</span></div>
       </div>
-      <div class="instr-g">
-        <div class="instr-g-icon">🖐️</div>
-        <div class="instr-g-name">Open Hand / Smooth</div>
-        <div class="instr-g-desc">Spread your palm flat to smooth and blend — move upward while smoothing to pull the clay up</div>
+      <div class="is-move">
+        <div class="m-num">03</div>
+        <div class="m-gesture">open palm</div>
+        <div class="m-action"><b>smooth</b><span>spread the palm — move upward to lift</span></div>
       </div>
-      <div class="instr-g">
-        <div class="instr-g-icon">✊</div>
-        <div class="instr-g-name">Fist / Compress</div>
-        <div class="instr-g-desc">Close your hand into a fist to push clay inward and compress</div>
+      <div class="is-move">
+        <div class="m-num">04</div>
+        <div class="m-gesture">fist</div>
+        <div class="m-action"><b>compress</b><span>close the hand to push the clay inward</span></div>
       </div>
-      <div class="instr-g">
-        <div class="instr-g-icon">🤲</div>
-        <div class="instr-g-name">Two-Hand Collar</div>
-        <div class="instr-g-desc">Use both open palms to symmetrically shape the walls together</div>
+      <div class="is-move">
+        <div class="m-num">05</div>
+        <div class="m-gesture">two palms</div>
+        <div class="m-action"><b>collar</b><span>both open palms shape the walls together</span></div>
       </div>
-      <div class="instr-g">
-        <div class="instr-g-icon">⏸️</div>
-        <div class="instr-g-name">Paused Sculpting</div>
-        <div class="instr-g-desc">Pause the wheel and drag a finger to sculpt freely in one spot</div>
+      <div class="is-move">
+        <div class="m-num">06</div>
+        <div class="m-gesture">paused wheel</div>
+        <div class="m-action"><b>free-form</b><span>stop the wheel — drag a finger to sculpt</span></div>
       </div>
     </div>
 
-    <div class="instr-sep">Controls</div>
-    <div class="instr-controls">
-      <div class="instr-c"><span class="instr-c-icon">🎚️</span><span>Sculpting Sensitivity — how strongly each gesture deforms the clay</span></div>
-      <div class="instr-c"><span class="instr-c-icon">🔽</span><span>Carving Depth — pressure applied; higher means deeper marks</span></div>
-      <div class="instr-c"><span class="instr-c-icon">🖌️</span><span>Brush Radius — size of the area each gesture affects</span></div>
-      <div class="instr-c"><span class="instr-c-icon">↺</span><span>Reset — restore the clay to its original cylinder shape</span></div>
-      <div class="instr-c"><span class="instr-c-icon">⏸</span><span>Pause — stop the wheel spinning for precise local shaping</span></div>
+    <div class="is-cta-row">
+      <button id="instr-start-btn" class="is-cta primary">
+        <span class="bracket l">[</span>
+        <span class="label">begin sculpting</span>
+        <span class="bracket r">]</span>
+      </button>
     </div>
+    <div class="is-cta-sub" style="margin-top:18px;">the wheel is already turning</div>
+  </div>
 
-    <button id="instr-start-btn">🏺 Start Sculpting</button>
+  <div class="hud bottom">
+    <div><span class="accent">●</span>&nbsp;&nbsp;06 movements</div>
+    <div class="center">— the move list —</div>
+    <div class="right">esc · skip</div>
   </div>
 </div>
 
@@ -654,32 +843,39 @@ renderer.toneMapping       = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.25;
 
 const scene  = new THREE.Scene();
-scene.background = new THREE.Color(0x2e1a0c);
-scene.fog = new THREE.FogExp2(0x2e1a0c, 0.045);
+// Moody warm-dark scene — dramatic key light, deep shadows, amber rim
+scene.background = new THREE.Color(0x1a0d05);
+scene.fog = new THREE.FogExp2(0x0e0703, 0.072);
 
 const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 120);
 camera.position.set(0, 1.8, 9);
 camera.lookAt(0, 0.4, 0);
 
-// Lights
-scene.add(new THREE.AmbientLight(0x3d1e08, 1.8));
-const sun = new THREE.DirectionalLight(0xffcc99, 3.0);
-sun.position.set(5,10,6); sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);
-Object.assign(sun.shadow.camera, {top:8,bottom:-8,left:-8,right:8,near:.5,far:50});
+// Lights — moody single warm key from upper right, low ambient, amber rim glow
+scene.add(new THREE.AmbientLight(0x3a1e10, 0.45));
+const sun = new THREE.DirectionalLight(0xffb070, 3.6);
+sun.position.set(4.5, 7, 4); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, {top:8, bottom:-8, left:-8, right:8, near:.5, far:50});
+sun.shadow.bias = -0.0003; sun.shadow.radius = 6;
 scene.add(sun);
-const fill = new THREE.DirectionalLight(0x806644, 0.9); fill.position.set(-6,4,-4); scene.add(fill);
-const rim  = new THREE.PointLight(0xff8833, 1.4, 25);   rim.position.set(-3,6,-4);  scene.add(rim);
+// Dim warm fill so the shadowed side doesn't go completely black
+const fill = new THREE.DirectionalLight(0x5a2810, 0.45); fill.position.set(-6, 3, -3); scene.add(fill);
+// Amber rim glow from behind-left
+const rim  = new THREE.PointLight(0xff7530, 2.4, 18); rim.position.set(-3, 4.5, -3.5); scene.add(rim);
+// Subtle warm under-bounce
+const bounce = new THREE.PointLight(0x6e2810, 0.6, 10); bounce.position.set(0, -1.2, 2); scene.add(bounce);
 
-// Pottery wheel
-const wheelMat = new THREE.MeshStandardMaterial({ color:0x251408, roughness:.92, metalness:.08 });
+// Pottery wheel — very dark stone
+const wheelMat = new THREE.MeshStandardMaterial({ color:0x1c0e06, roughness:.95, metalness:.05 });
 const wheelDisk = new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.3,0.14,72), wheelMat);
 wheelDisk.position.y = -1.65; wheelDisk.receiveShadow = true; scene.add(wheelDisk);
-const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.38,1.3,32), wheelMat);
+const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.38,1.3,32),
+  new THREE.MeshStandardMaterial({ color:0x2a1408, roughness:.92, metalness:.05 }));
 pedestal.position.y = -2.38; pedestal.castShadow = pedestal.receiveShadow = true; scene.add(pedestal);
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(30,30),
-  new THREE.MeshStandardMaterial({ color:0x190d05, roughness:1 })
+  new THREE.MeshStandardMaterial({ color:0x140803, roughness:1 })
 );
 ground.rotation.x = -Math.PI/2; ground.position.y = -3.05; ground.receiveShadow = true; scene.add(ground);
 
@@ -694,17 +890,18 @@ clay.castShadow = clay.receiveShadow = true; scene.add(clay);
 // ── Per-hand cursors & rings ─────────────────────────────────────
 function makeMesh(geo, mat) { const m=new THREE.Mesh(geo,mat); m.visible=false; scene.add(m); return m; }
 
+// Cursors — olive (left) + warm brown (right), in keeping with Core Harmony palette
 const cursors = {
-  left:  makeMesh(new THREE.SphereGeometry(.06,16,16), new THREE.MeshBasicMaterial({color:0x44ccff,transparent:true,opacity:.85})),
-  right: makeMesh(new THREE.SphereGeometry(.06,16,16), new THREE.MeshBasicMaterial({color:0xff8833,transparent:true,opacity:.85})),
+  left:  makeMesh(new THREE.SphereGeometry(.06,16,16), new THREE.MeshBasicMaterial({color:0x5C6B3A,transparent:true,opacity:.92})),
+  right: makeMesh(new THREE.SphereGeometry(.06,16,16), new THREE.MeshBasicMaterial({color:0x6B4A2A,transparent:true,opacity:.92})),
 };
 const rings = {
-  left:  makeMesh(new THREE.TorusGeometry(1,.022,8,52), new THREE.MeshBasicMaterial({color:0x44ccff,transparent:true,opacity:.35})),
-  right: makeMesh(new THREE.TorusGeometry(1,.022,8,52), new THREE.MeshBasicMaterial({color:0xff8833,transparent:true,opacity:.35})),
+  left:  makeMesh(new THREE.TorusGeometry(1,.018,8,52), new THREE.MeshBasicMaterial({color:0x5C6B3A,transparent:true,opacity:.55})),
+  right: makeMesh(new THREE.TorusGeometry(1,.018,8,52), new THREE.MeshBasicMaterial({color:0x6B4A2A,transparent:true,opacity:.55})),
 };
 
-// Fist compression ring — flat torus that pulses outward at clay top
-const compressionRingMat = new THREE.MeshBasicMaterial({ color:0xff7730, transparent:true, opacity:0 });
+// Fist compression ring — olive accent
+const compressionRingMat = new THREE.MeshBasicMaterial({ color:0x5C6B3A, transparent:true, opacity:0 });
 const compressionRing = makeMesh(new THREE.TorusGeometry(1, 0.045, 8, 64), compressionRingMat);
 compressionRing.rotation.x = Math.PI / 2;   // lay flat / horizontal
 let compressionRingPhase = 0;
@@ -1504,10 +1701,10 @@ function detectLoop() {
           octx.fillText(`▶ ${s.gesture}`, bx, by+60);
         }
 
-        // Update UI gesture pill
+        // Update UI gesture pill (preserve .ghand span structure)
         const pill = document.getElementById(`gest-${key}`);
         if (pill) {
-          pill.textContent = `${key[0].toUpperCase()}: ${s.gesture}`;
+          pill.innerHTML = `<span class="ghand">${key}</span>${s.gesture}`;
           pill.className = `gesture-pill active-${key}`;
         }
       }
@@ -1517,7 +1714,7 @@ function detectLoop() {
     for (const key of ['left','right']) {
       if (!HS[key].visible) {
         const pill = document.getElementById(`gest-${key}`);
-        if (pill) { pill.textContent = `${key[0].toUpperCase()}: —`; pill.className='gesture-pill'; }
+        if (pill) { pill.innerHTML = `<span class="ghand">${key}</span>—`; pill.className='gesture-pill'; }
       }
     }
 
@@ -1746,10 +1943,10 @@ function animate() {
 // sensitive.  Reset buttons restore the defaults (0.72).
 
 const CAL_STEPS = [
-  { gesture: 'poke',   icon: '☝',  label: 'Point finger' },
-  { gesture: 'pinch',  icon: '🤏', label: 'Pinch thumb + index' },
-  { gesture: 'smooth', icon: '🖐',  label: 'Open flat hand' },
-  { gesture: 'fist',   icon: '✊',  label: 'Make a fist' },
+  { gesture: 'poke',   icon: '— I —',   label: 'point finger' },
+  { gesture: 'pinch',  icon: '— II —',  label: 'pinch thumb + index' },
+  { gesture: 'smooth', icon: '— III —', label: 'open flat hand' },
+  { gesture: 'fist',   icon: '— IV —',  label: 'make a fist' },
 ];
 
 const cal = {
@@ -1771,7 +1968,7 @@ function showCalStep(step) {
   if (!overlay) return;
   document.getElementById('cal-icon').textContent         = info.icon;
   document.getElementById('cal-gesture-name').textContent = info.label;
-  document.getElementById('cal-step-count').textContent   = `Step ${step+1} of ${CAL_STEPS.length}`;
+  document.getElementById('cal-step-count').textContent   = `step 0${step+1} / 0${CAL_STEPS.length}`;
   document.getElementById('cal-fill').style.width         = '0%';
   overlay.style.display = 'flex';
 }
@@ -1880,6 +2077,8 @@ threeCanvas.addEventListener('pointercancel', endDrag);
 pauseBtn.addEventListener('click', ()=>{
   isSpinning = !isSpinning;
   pauseBtn.textContent = isSpinning ? '⏸ Pause' : '▶ Play';
+  pauseBtn.style.borderColor = isSpinning ? '' : 'var(--accent-olive)';
+  pauseBtn.style.color = isSpinning ? '' : 'var(--accent-olive)';
   // Show/hide inspect hint and cursor
   dragHint.style.display = isSpinning ? 'none' : 'block';
   setDragCursor(false);
@@ -1917,18 +2116,41 @@ window.addEventListener('resize', ()=>{
 // ═══════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════
+// Body class hides in-app chrome while title/instructions overlays show.
+document.body.classList.add('boot-stage');
+
 document.getElementById('start-btn').addEventListener('click', async ()=>{
-  document.getElementById('onboarding').style.display='none';
+  const ob = document.getElementById('onboarding');
+  const is = document.getElementById('instructions');
+  // Stage 1: deepen title bg to match instructions density (background stays consistent)
+  ob.classList.add('is-leaving');
   showingInstructions = true;
-  document.getElementById('instructions').style.display='flex';
+  setTimeout(()=>{
+    // Stage 2: crossfade — title out, instructions in
+    ob.classList.add('is-gone');
+    is.style.display = 'flex';
+    requestAnimationFrame(()=> requestAnimationFrame(()=> is.classList.add('is-in')));
+  }, 320);
   await loadMediaPipe();
   await startCam();
-  animate();
 });
+
+// Clay spins behind the title screen immediately on load
+animate();
 
 document.getElementById('instr-start-btn').addEventListener('click', ()=>{
   showingInstructions = false;
-  document.getElementById('instructions').style.display='none';
+  document.getElementById('instructions').classList.add('is-gone');
+  setTimeout(()=> document.body.classList.remove('boot-stage'), 600);
+});
+
+// Enter key advances the active overlay
+window.addEventListener('keydown', (e)=>{
+  if (e.key !== 'Enter') return;
+  const ob = document.getElementById('onboarding');
+  const is = document.getElementById('instructions');
+  if (!ob.classList.contains('is-gone'))                                        document.getElementById('start-btn').click();
+  else if (!is.classList.contains('is-gone') && is.style.display !== 'none')   document.getElementById('instr-start-btn').click();
 });
 
 </script>
